@@ -2,25 +2,38 @@ import React, { useState } from "react";
 import { getImageUrl } from "../api/client";
 import { Maximize2, X, CheckCircle, Clock } from "lucide-react";
 
-export const BeforeAfterComparison = ({ beforeImage, afterImage, progressImages = [] }) => {
+export const BeforeAfterComparison = ({ beforeImage, afterImage, progressImages = [], theme = "dark" }) => {
   const [activeModalImage, setActiveModalImage] = useState(null);
 
   const beforeUrl = beforeImage?.imageUrl ? getImageUrl(beforeImage.imageUrl) : null;
   const afterUrl = afterImage?.imageUrl ? getImageUrl(afterImage.imageUrl) : null;
+  const isLight = theme === "light";
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* BEFORE IMAGE CARD */}
-        <div className="bg-[#070B14] border border-slate-800 rounded-2xl p-4 flex flex-col">
+        <div className={`rounded-2xl p-4 flex flex-col border ${
+          isLight
+            ? "bg-[#F8FAFC] border-[#E2E8F0]"
+            : "bg-[#070B14] border-slate-800"
+        }`}>
           <div className="flex items-center justify-between mb-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-950/40 text-rose-300 border border-rose-500/30">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+              isLight
+                ? "bg-rose-50 text-rose-700 border-rose-200"
+                : "bg-rose-950/40 text-rose-300 border-rose-500/30"
+            }`}>
               <Clock className="w-3.5 h-3.5" /> BEFORE RESOLUTION
             </span>
-            <span className="text-xs text-slate-400">Citizen Submission</span>
+            <span className={`text-xs ${isLight ? "text-[#64748B]" : "text-slate-400"}`}>Citizen Submission</span>
           </div>
 
-          <div className="relative group rounded-xl overflow-hidden bg-slate-900 aspect-video flex items-center justify-center border border-slate-800">
+          <div className={`relative group rounded-xl overflow-hidden aspect-video flex items-center justify-center border ${
+            isLight
+              ? "bg-[#F1F5F9] border-[#E2E8F0]"
+              : "bg-slate-900 border-slate-800"
+          }`}>
             {beforeUrl ? (
               <>
                 <img
@@ -36,21 +49,33 @@ export const BeforeAfterComparison = ({ beforeImage, afterImage, progressImages 
                 </button>
               </>
             ) : (
-              <p className="text-xs text-slate-500">No before image provided</p>
+              <p className={`text-xs ${isLight ? "text-[#94A3B8]" : "text-slate-500"}`}>No before image provided</p>
             )}
           </div>
         </div>
 
         {/* AFTER IMAGE CARD */}
-        <div className="bg-[#070B14] border border-slate-800 rounded-2xl p-4 flex flex-col">
+        <div className={`rounded-2xl p-4 flex flex-col border ${
+          isLight
+            ? "bg-[#F8FAFC] border-[#E2E8F0]"
+            : "bg-[#070B14] border-slate-800"
+        }`}>
           <div className="flex items-center justify-between mb-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-950/40 text-emerald-300 border border-emerald-500/30">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+              isLight
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-emerald-950/40 text-emerald-300 border-emerald-500/30"
+            }`}>
               <CheckCircle className="w-3.5 h-3.5" /> AFTER RESOLUTION
             </span>
-            <span className="text-xs text-slate-400">Municipal Verification</span>
+            <span className={`text-xs ${isLight ? "text-[#64748B]" : "text-slate-400"}`}>Municipal Verification</span>
           </div>
 
-          <div className="relative group rounded-xl overflow-hidden bg-slate-900 aspect-video flex items-center justify-center border border-slate-800">
+          <div className={`relative group rounded-xl overflow-hidden aspect-video flex items-center justify-center border ${
+            isLight
+              ? "bg-[#F1F5F9] border-[#E2E8F0]"
+              : "bg-slate-900 border-slate-800"
+          }`}>
             {afterUrl ? (
               <>
                 <img
@@ -66,9 +91,9 @@ export const BeforeAfterComparison = ({ beforeImage, afterImage, progressImages 
                 </button>
               </>
             ) : (
-              <div className="text-center p-4 text-slate-400">
+              <div className={`text-center p-4 ${isLight ? "text-[#64748B]" : "text-slate-400"}`}>
                 <p className="text-xs font-medium">Resolution photo pending</p>
-                <p className="text-[11px] text-slate-500 mt-1">
+                <p className={`text-[11px] mt-1 ${isLight ? "text-[#94A3B8]" : "text-slate-500"}`}>
                   Field staff will upload proof of work upon task completion.
                 </p>
               </div>
@@ -79,8 +104,14 @@ export const BeforeAfterComparison = ({ beforeImage, afterImage, progressImages 
 
       {/* Progress Images if any */}
       {progressImages && progressImages.length > 0 && (
-        <div className="bg-[#070B14] border border-slate-800 rounded-2xl p-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+        <div className={`rounded-2xl p-4 border ${
+          isLight
+            ? "bg-[#F8FAFC] border-[#E2E8F0]"
+            : "bg-[#070B14] border-slate-800"
+        }`}>
+          <h4 className={`text-xs font-bold uppercase tracking-wider mb-3 ${
+            isLight ? "text-[#64748B]" : "text-slate-400"
+          }`}>
             Interim Field Work Photos ({progressImages.length})
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -90,7 +121,11 @@ export const BeforeAfterComparison = ({ beforeImage, afterImage, progressImages 
                 <div
                   key={prog._id || i}
                   onClick={() => setActiveModalImage({ url, title: `Work In Progress #${i + 1}` })}
-                  className="relative group rounded-xl overflow-hidden bg-slate-900 aspect-video cursor-pointer border border-slate-800"
+                  className={`relative group rounded-xl overflow-hidden aspect-video cursor-pointer border ${
+                    isLight
+                      ? "bg-[#F1F5F9] border-[#E2E8F0]"
+                      : "bg-slate-900 border-slate-800"
+                  }`}
                 >
                   <img src={url} alt={`Progress ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold">

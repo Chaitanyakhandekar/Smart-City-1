@@ -5,11 +5,14 @@ import toast from "react-hot-toast";
 export const ImageUploadPreview = ({
   onImageChange,
   required = false,
-  label = "Upload Complaint Photograph"
+  label = "Upload Complaint Photograph",
+  theme = "dark"
 }) => {
   const [preview, setPreview] = useState(null);
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef(null);
+
+  const isLight = theme === "light";
 
   const handleFile = (file) => {
     if (!file) return;
@@ -52,8 +55,8 @@ export const ImageUploadPreview = ({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-semibold text-slate-300">
-        {label} {required && <span className="text-rose-400">*</span>}
+      <label className={`block text-xs font-semibold ${isLight ? "text-[#0F172A]" : "text-slate-300"}`}>
+        {label} {required && <span className="text-rose-500">*</span>}
       </label>
 
       {!preview ? (
@@ -61,7 +64,11 @@ export const ImageUploadPreview = ({
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-slate-700 hover:border-teal-500 bg-[#070B14] hover:bg-teal-500/5 rounded-2xl p-6 text-center cursor-pointer transition-all group"
+          className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all group ${
+            isLight
+              ? "border-[#CBD5E1] hover:border-[#0D9488] bg-[#F8FAFC] hover:bg-[#F0FDFA]"
+              : "border-slate-700 hover:border-teal-500 bg-[#070B14] hover:bg-teal-500/5"
+          }`}
         >
           <input
             ref={fileInputRef}
@@ -70,18 +77,26 @@ export const ImageUploadPreview = ({
             className="hidden"
             onChange={(e) => handleFile(e.target.files[0])}
           />
-          <div className="w-12 h-12 mx-auto rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/30 flex items-center justify-center group-hover:scale-110 transition-transform mb-3">
+          <div className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center group-hover:scale-110 transition-transform mb-3 ${
+            isLight
+              ? "bg-[#F0FDFA] text-[#0D9488] border border-[#CCFBF1]"
+              : "bg-teal-500/10 text-teal-400 border border-teal-500/30"
+          }`}>
             <UploadCloud className="w-6 h-6" />
           </div>
-          <p className="text-sm font-semibold text-slate-200">
+          <p className={`text-sm font-semibold ${isLight ? "text-[#0F172A]" : "text-slate-200"}`}>
             Click to upload or drag & drop photo
           </p>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className={`text-xs mt-1 ${isLight ? "text-[#64748B]" : "text-slate-400"}`}>
             JPG, JPEG, PNG, or WEBP (Max 10MB)
           </p>
         </div>
       ) : (
-        <div className="relative border border-slate-800 rounded-2xl overflow-hidden bg-[#070B14] aspect-video max-h-64 flex items-center justify-center">
+        <div className={`relative border rounded-2xl overflow-hidden aspect-video max-h-64 flex items-center justify-center ${
+          isLight
+            ? "border-[#E2E8F0] bg-[#F8FAFC]"
+            : "border-slate-800 bg-[#070B14]"
+        }`}>
           <img
             src={preview}
             alt="Upload Preview"

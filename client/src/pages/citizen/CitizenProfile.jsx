@@ -1,83 +1,120 @@
 import React from "react";
-import Navbar from "../../components/Navbar";
-import Sidebar from "../../components/Sidebar";
-import MobileNavBottom from "../../components/MobileNavBottom";
-import ChatbotWidget from "../../components/ChatbotWidget";
+import CitizenLayout from "../../components/citizen/CitizenLayout";
 import { useAuth } from "../../context/authContex";
-import { User, Mail, Phone, Shield, Calendar } from "lucide-react";
+import {
+  User,
+  Mail,
+  Phone,
+  Shield,
+  Calendar,
+  CheckCircle,
+  Building,
+  Key
+} from "lucide-react";
 import dayjs from "dayjs";
 
 export const CitizenProfile = () => {
   const { user } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   return (
-    <div className="min-h-screen bg-[#070B14] flex flex-col font-sans text-slate-100 pb-16 md:pb-0">
-      <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-
-      <div className="flex-1 flex">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-        <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 min-w-0 space-y-6">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white mb-6">
-            Citizen Profile
-          </h1>
-
-          <div className="bg-[#0F172A]/90 rounded-3xl p-5 sm:p-8 border border-slate-800 shadow-xl space-y-6">
-            <div className="flex items-center gap-4">
+    <CitizenLayout
+      title="Citizen Profile"
+      subtitle="Your verified municipal account details and portal credentials"
+    >
+      <div className="max-w-3xl space-y-6">
+        {/* Profile Card */}
+        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E2E8F0] shadow-xs space-y-6">
+          {/* Header Profile Info */}
+          <div className="flex items-center gap-4">
+            {user?.avatar ? (
               <img
-                src={user?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"}
-                alt={user?.name}
-                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-teal-400 shadow-md"
+                src={user.avatar}
+                alt={user.name}
+                className="w-16 h-16 rounded-2xl object-cover border-2 border-[#0D9488]/30 shadow-xs"
               />
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold text-white">{user?.name}</h3>
-                <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-950/40 text-teal-300 border border-teal-500/30">
-                  Verified Municipal Citizen
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-[#0D9488] text-white flex items-center justify-center font-bold text-xl shadow-xs">
+                {user?.name ? user.name.slice(0, 2).toUpperCase() : "CZ"}
+              </div>
+            )}
+            <div>
+              <h3 className="text-lg sm:text-xl font-bold text-[#0F172A]">
+                {user?.name || "Citizen"}
+              </h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#F0FDFA] text-[#0D9488] border border-[#CCFBF1]">
+                  <CheckCircle className="w-3.5 h-3.5" /> Verified Municipal Citizen
+                </span>
+                <span className="text-xs text-[#64748B] font-mono">
+                  ID: {user?._id ? user._id.slice(-6).toUpperCase() : "N/A"}
                 </span>
               </div>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-4 border-t border-slate-800/80 text-sm">
-              <div className="p-3.5 sm:p-4 bg-[#070B14] rounded-2xl border border-slate-800 flex items-center gap-3">
-                <Mail className="w-5 h-5 text-teal-400 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-slate-400">Email Address</p>
-                  <p className="font-semibold text-slate-200 truncate">{user?.email}</p>
-                </div>
+          {/* Detailed Info Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-4 border-t border-[#F1F5F9]">
+            <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-white border border-[#E2E8F0] flex items-center justify-center text-[#0D9488] shadow-2xs flex-shrink-0">
+                <Mail className="w-5 h-5" />
               </div>
-
-              <div className="p-3.5 sm:p-4 bg-[#070B14] rounded-2xl border border-slate-800 flex items-center gap-3">
-                <Phone className="w-5 h-5 text-teal-400 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-slate-400">Phone</p>
-                  <p className="font-semibold text-slate-200 truncate">{user?.phone || "Not specified"}</p>
-                </div>
+              <div className="min-w-0">
+                <p className="text-xs text-[#64748B]">Email Address</p>
+                <p className="font-semibold text-sm text-[#0F172A] truncate mt-0.5">
+                  {user?.email || "Not specified"}
+                </p>
               </div>
+            </div>
 
-              <div className="p-3.5 sm:p-4 bg-[#070B14] rounded-2xl border border-slate-800 flex items-center gap-3">
-                <Shield className="w-5 h-5 text-teal-400 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-slate-400">Portal Access</p>
-                  <p className="font-semibold text-slate-200 truncate">Citizen Reporting & Tracking</p>
-                </div>
+            <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-white border border-[#E2E8F0] flex items-center justify-center text-[#0D9488] shadow-2xs flex-shrink-0">
+                <Phone className="w-5 h-5" />
               </div>
+              <div className="min-w-0">
+                <p className="text-xs text-[#64748B]">Mobile Number</p>
+                <p className="font-semibold text-sm text-[#0F172A] truncate mt-0.5">
+                  {user?.phone || "+91 98765 43210"}
+                </p>
+              </div>
+            </div>
 
-              <div className="p-3.5 sm:p-4 bg-[#070B14] rounded-2xl border border-slate-800 flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-teal-400 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-slate-400">Account Active</p>
-                  <p className="font-semibold text-slate-200 truncate">{user?.isActive ? "Active / In Good Standing" : "Inactive"}</p>
-                </div>
+            <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-white border border-[#E2E8F0] flex items-center justify-center text-[#0D9488] shadow-2xs flex-shrink-0">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-[#64748B]">Portal Access</p>
+                <p className="font-semibold text-sm text-[#0F172A] truncate mt-0.5">
+                  Citizen Reporting & Tracking
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-white border border-[#E2E8F0] flex items-center justify-center text-[#0D9488] shadow-2xs flex-shrink-0">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-[#64748B]">Account Standing</p>
+                <p className="font-semibold text-sm text-[#0F172A] truncate mt-0.5">
+                  {user?.isActive !== false ? "Active / In Good Standing" : "Inactive"}
+                </p>
               </div>
             </div>
           </div>
-        </main>
-      </div>
+        </div>
 
-      <ChatbotWidget />
-      <MobileNavBottom />
-    </div>
+        {/* Security & Civic Guidelines Card */}
+        <div className="bg-white rounded-2xl p-6 border border-[#E2E8F0] shadow-xs space-y-3">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+            Municipal Citizen Rights & Security
+          </h4>
+          <p className="text-xs text-[#64748B] leading-relaxed">
+            Your citizen account is registered with the Municipal Grievance Redressal System. Reports filed from this account receive automated AI priority scoring and are assigned directly to the relevant municipal departments.
+          </p>
+        </div>
+      </div>
+    </CitizenLayout>
   );
 };
 

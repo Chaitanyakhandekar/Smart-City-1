@@ -8,7 +8,6 @@ import {
   Bot,
   User,
   Sparkles,
-  Loader2,
   ClipboardList,
   FolderOpen,
   PlusCircle,
@@ -64,14 +63,14 @@ function getQuickActions(role) {
 
 const TypingIndicator = () => (
   <div className="flex items-center gap-2 pl-2">
-    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-teal-500 to-cyan-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-bold">
+    <div className="w-7 h-7 rounded-xl bg-teal-50 text-[#0D9488] border border-teal-200 flex items-center justify-center flex-shrink-0">
       <Bot className="w-4 h-4" />
     </div>
-    <div className="bg-[#0F172A] border border-slate-800 rounded-2xl rounded-bl-xs px-4 py-3 shadow-md">
+    <div className="bg-white border border-[#E2E8F0] rounded-2xl rounded-bl-xs px-4 py-2.5 shadow-xs">
       <div className="flex items-center gap-1.5">
-        <span className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-        <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-        <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+        <span className="w-2 h-2 bg-[#0D9488] rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+        <span className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+        <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
       </div>
     </div>
   </div>
@@ -90,8 +89,8 @@ export const ChatbotWidget = () => {
   // Build personalized welcome message
   const firstName = user?.name ? user.name.split(" ")[0] : "";
   const welcomeText = firstName
-    ? `Hello, ${firstName}! 👋 I'm your **Smart City Civic Assistant**.\n\nI can check your complaints, provide status updates, guide you through filing reports, or explain municipal categories. How can I help you today?`
-    : "Hello! 👋 I'm your **Smart City Civic Assistant**.\n\nI can check your active complaints, provide status updates, guide you through filing reports, or explain municipal categories. How can I help you today?";
+    ? `Hello, ${firstName}! 👋 I'm your **SmartCity Civic Assistant**.\n\nI can check your active complaints, provide live status updates, guide you through filing reports, or explain municipal categories. How can I assist you today?`
+    : "Hello! 👋 I'm your **SmartCity Civic Assistant**.\n\nI can check your active complaints, provide live status updates, guide you through filing reports, or explain municipal categories. How can I assist you today?";
 
   const [messages, setMessages] = useState([
     {
@@ -111,12 +110,11 @@ export const ChatbotWidget = () => {
   useEffect(() => {
     if (isOpen) {
       scrollToBottom();
-      // Focus input when chat opens
       setTimeout(() => inputRef.current?.focus(), 200);
     }
   }, [messages, isOpen]);
 
-  if (!isLoggedIn) return null; // Chatbot only active for authenticated users
+  if (!isLoggedIn) return null;
 
   const quickActions = getQuickActions(user?.role);
 
@@ -167,26 +165,26 @@ export const ChatbotWidget = () => {
     <div className="fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50">
       {/* Chat Window */}
       {isOpen ? (
-        <div className="w-[calc(100vw-24px)] sm:w-[400px] max-w-[400px] h-[min(540px,calc(100dvh-110px))] bg-[#0F172A] rounded-3xl shadow-2xl border border-slate-800 flex flex-col overflow-hidden transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-6">
+        <div className="w-[calc(100vw-24px)] sm:w-[400px] max-w-[400px] h-[min(540px,calc(100dvh-110px))] bg-white rounded-3xl shadow-2xl border border-[#E2E8F0] flex flex-col overflow-hidden transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-6 text-[#0F172A]">
           {/* Header */}
-          <div className="bg-[#0B1120] text-white p-4 flex items-center justify-between border-b border-slate-800 shadow-sm">
+          <div className="bg-[#F8FAFC] p-4 flex items-center justify-between border-b border-[#E2E8F0]">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-500 to-cyan-500 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-teal-500/20">
+              <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#0D9488] border border-teal-200 flex items-center justify-center font-bold shadow-2xs">
                 <Bot className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold flex items-center gap-1.5 text-white" id="chatbot-header-title">
-                  Smart City Assistant <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                <h3 className="text-sm font-bold flex items-center gap-1.5 text-[#0F172A]" id="chatbot-header-title">
+                  SmartCity Assistant <Sparkles className="w-3.5 h-3.5 text-[#0D9488]" />
                 </h3>
-                <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                <span className="text-[10px] text-[#64748B] flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
                   Connected to Municipal DB
                 </span>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-1 rounded-lg hover:bg-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] transition-colors"
               aria-label="Close chat"
               id="chatbot-close-btn"
             >
@@ -195,30 +193,30 @@ export const ChatbotWidget = () => {
           </div>
 
           {/* Chat Messages */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-[#070B14] text-xs sm:text-sm" id="chatbot-messages">
+          <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-[#F8FAFC] text-xs sm:text-sm" id="chatbot-messages">
             {messages.map((msg, i) => (
               <div
                 key={i}
                 className={`flex gap-2.5 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.sender === "bot" && (
-                  <div className="w-7 h-7 rounded-lg bg-teal-500/20 text-teal-300 border border-teal-500/40 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
+                  <div className="w-7 h-7 rounded-xl bg-white text-[#0D9488] border border-[#E2E8F0] flex items-center justify-center flex-shrink-0 mt-1 shadow-2xs">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
                 <div
                   className={`p-3.5 rounded-2xl max-w-[85%] leading-relaxed ${
                     msg.sender === "user"
-                      ? "bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-br-xs shadow-md"
-                      : "bg-[#0F172A] text-slate-200 border border-slate-800 rounded-bl-xs shadow-md"
+                      ? "bg-[#0D9488] text-white rounded-br-xs shadow-xs"
+                      : "bg-white text-[#0F172A] border border-[#E2E8F0] rounded-bl-xs shadow-xs"
                   }`}
                 >
-                  <div className="prose prose-xs prose-invert max-w-none text-current [&_strong]:text-teal-300 [&_a]:text-cyan-400">
+                  <div className={`prose prose-xs max-w-none text-current ${msg.sender === "user" ? "prose-invert [&_strong]:text-white" : "[&_strong]:text-[#0D9488] [&_a]:text-[#0D9488]"}`}>
                     <ReactMarkdown>{msg.text}</ReactMarkdown>
                   </div>
                 </div>
                 {msg.sender === "user" && (
-                  <div className="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
+                  <div className="w-7 h-7 rounded-xl bg-[#0F172A] text-white flex items-center justify-center flex-shrink-0 mt-1 shadow-2xs">
                     <User className="w-4 h-4" />
                   </div>
                 )}
@@ -230,13 +228,13 @@ export const ChatbotWidget = () => {
           </div>
 
           {/* Quick Action Chips */}
-          <div className="px-3 py-2 bg-[#0B1120] border-t border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar" id="chatbot-quick-actions">
+          <div className="px-3 py-2 bg-white border-t border-[#E2E8F0] flex items-center gap-1.5 overflow-x-auto no-scrollbar" id="chatbot-quick-actions">
             {quickActions.map((action, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSend(action.message)}
                 disabled={loading}
-                className="whitespace-nowrap px-2.5 py-1 rounded-lg bg-[#0F172A] hover:bg-teal-500/10 text-slate-300 hover:text-teal-300 hover:border-teal-500/50 text-[11px] font-medium transition-colors border border-slate-700/80 disabled:opacity-40"
+                className="whitespace-nowrap px-2.5 py-1 rounded-lg bg-[#F8FAFC] hover:bg-teal-50 text-[#475569] hover:text-[#0D9488] hover:border-teal-200 text-[11px] font-medium transition-colors border border-[#E2E8F0] disabled:opacity-40"
                 id={`chatbot-quick-${idx}`}
               >
                 {action.label}
@@ -250,7 +248,7 @@ export const ChatbotWidget = () => {
               e.preventDefault();
               handleSend();
             }}
-            className="p-3 bg-[#0B1120] border-t border-slate-800 flex items-center gap-2"
+            className="p-3 bg-white border-t border-[#E2E8F0] flex items-center gap-2"
           >
             <input
               ref={inputRef}
@@ -260,13 +258,13 @@ export const ChatbotWidget = () => {
               onKeyDown={handleKeyDown}
               placeholder="Ask about your complaints, status..."
               disabled={loading}
-              className="flex-1 text-xs sm:text-sm px-3.5 py-2.5 bg-[#070B14] border border-slate-700 text-slate-200 placeholder-slate-500 rounded-xl focus:outline-none focus:border-teal-500 disabled:opacity-60 transition-colors"
+              className="flex-1 text-xs sm:text-sm px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8] rounded-xl focus:outline-none focus:border-[#0D9488] focus:bg-white disabled:opacity-60 transition-colors"
               id="chatbot-input"
             />
             <button
               type="submit"
               disabled={!inputMessage.trim() || loading}
-              className="p-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 hover:brightness-110 disabled:opacity-40 transition-all shadow-md font-bold"
+              className="p-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white disabled:opacity-40 transition-all shadow-xs font-bold"
               aria-label="Send message"
               id="chatbot-send-btn"
             >
@@ -278,15 +276,15 @@ export const ChatbotWidget = () => {
         /* Floating Button */
         <button
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-3 bg-[#0F172A]/90 backdrop-blur-md hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-full shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 border border-teal-500/30 group"
+          className="flex items-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-3 bg-white hover:bg-[#F8FAFC] text-[#0F172A] font-semibold text-xs sm:text-sm rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 border border-[#E2E8F0] group"
           aria-label="Open Smart City Assistant"
           id="chatbot-open-btn"
         >
           <div className="relative">
-            <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-teal-400" />
-            <span className="absolute -top-1 -right-1 w-2 sm:w-2.5 h-2 sm:h-2.5 bg-teal-400 rounded-full animate-ping"></span>
+            <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-[#0D9488]" />
+            <span className="absolute -top-1 -right-1 w-2 sm:w-2.5 h-2 sm:h-2.5 bg-[#0D9488] rounded-full animate-ping"></span>
           </div>
-          <span className="tracking-tight whitespace-nowrap text-slate-100">Smart Assistant</span>
+          <span className="tracking-tight whitespace-nowrap text-[#0F172A]">Smart Assistant</span>
         </button>
       )}
     </div>
