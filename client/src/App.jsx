@@ -7,6 +7,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 // Public Pages
 import Home from "./pages/public/Home";
+import NotFound from "./pages/public/NotFound";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
@@ -220,8 +221,8 @@ function App() {
           }
         />
 
-        {/* Fallback redirect to Home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* 404 — Page Not Found for unmatched URLs */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
