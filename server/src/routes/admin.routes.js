@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getAdminDashboard,
+  getAdminAnalytics,
   getAllComplaints,
   updateComplaint,
   assignStaff,
@@ -17,6 +18,7 @@ const router = Router();
 router.use(authenticate, authorizeRoles("ADMIN"));
 
 router.get("/dashboard", getAdminDashboard);
+router.get("/analytics", getAdminAnalytics);
 router.get("/complaints", getAllComplaints);
 router.patch("/complaints/:id", updateComplaint);
 router.post("/complaints/:id/assign", assignStaff);

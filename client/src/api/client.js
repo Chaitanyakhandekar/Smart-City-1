@@ -100,6 +100,7 @@ export const staffApi = {
 
 export const adminApi = {
   getDashboard: () => api.get("/admin/dashboard"),
+  getAnalytics: (params) => api.get("/admin/analytics", { params }),
   getAllComplaints: (params) => api.get("/admin/complaints", { params }),
   updateComplaint: (id, data) => api.patch(`/admin/complaints/${id}`, data),
   assignStaff: (id, data) => api.post(`/admin/complaints/${id}/assign`, data),
