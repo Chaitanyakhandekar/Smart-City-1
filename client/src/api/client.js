@@ -76,7 +76,9 @@ export const complaintApi = {
   getComplaintById: (id) => api.get(`/complaints/${id}`),
   getCitizenDashboard: () => api.get("/complaints/dashboard"),
   confirmResolution: (id) => api.post(`/complaints/${id}/confirm`),
-  reopenComplaint: (id, data) => api.post(`/complaints/${id}/reopen`, data)
+  reopenComplaint: (id, data) => api.post(`/complaints/${id}/reopen`, data),
+  testImageAuthenticity: (id, target) =>
+    api.post(`/complaints/${id}/image-authenticity-test`, { target })
 };
 
 export const staffApi = {

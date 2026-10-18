@@ -1,11 +1,15 @@
+import path from "path";
+import fs from "fs";
 import { Complaint } from "../models/complaints.model.js";
 import { ComplaintImage } from "../models/complaintImages.model.js";
 import { ComplaintUpdate } from "../models/complaintUpdates.model.js";
+import { ImageAuthenticityTest } from "../models/imageAuthenticityTest.model.js";
 import { User } from "../models/users.model.js";
 import { ApiError, ApiResponse } from "../utils/apiUtils.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { generateComplaintNumber } from "../utils/complaintNumber.js";
 import { analyzeComplaintImageAndText } from "../services/aiService.js";
+import { analyzeImageAuthenticity } from "../services/imageAuthenticity.service.js";
 import { createNotification, createBulkNotifications } from "../services/notification.service.js";
 
 /**
@@ -222,6 +226,14 @@ export const getComplaintById = asyncHandler(async (req, res) => {
     .populate("user", "name role designation")
     .sort({ createdAt: 1 });
 
+  // Fetch authenticity test history if user is Admin or Owner
+  let authenticityTests = [];
+  if (isAdmin || isOwner) {
+    authenticityTests = await ImageAuthenticityTest.find({ complaint: complaint._id })
+      .populate("testedBy", "name role")
+      .sort({ createdAt: -1 });
+  }
+
   res.status(200).json(
     new ApiResponse(
       200,
@@ -229,6 +241,7 @@ export const getComplaintById = asyncHandler(async (req, res) => {
         complaint,
         images,
         timeline,
+        authenticityTests,
         beforeImage: images.find((i) => i.imageType === "BEFORE") || null,
         progressImages: images.filter((i) => i.imageType === "PROGRESS"),
         afterImage: images.find((i) => i.imageType === "AFTER") || null
@@ -412,3 +425,127 @@ export const getCitizenDashboard = asyncHandler(async (req, res) => {
     )
   );
 });
+
+/**
+ * On-Demand AI Image Authenticity Test
+ * Strict user-triggered endpoint: only called when an authorized user explicitly clicks "Test Image Authenticity".
+ *
+ * Authorization rules:
+ * - ADMIN: can test original complaint evidence (imageType: BEFORE) or resolution evidence (imageType: AFTER).
+ * - CITIZEN: can only test the resolution evidence (imageType: AFTER) for complaints they own.
+ * - STAFF: forbidden.
+ */
+export const testComplaintImageAuthenticity = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { target } = req.body;
+
+  if (!target || !["original", "resolution"].includes(target)) {
+    throw new ApiError(400, "Invalid target. Must specify 'original' or 'resolution'.");
+  }
+
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+  const query = isObjectId ? { _id: id } : { complaintNumber: id.trim().toUpperCase() };
+
+  const complaint = await Complaint.findOne(query);
+  if (!complaint) {
+    throw new ApiError(404, "Complaint not found.");
+  }
+
+  const userRole = req.user.role;
+  const isOwner = complaint.citizen.toString() === req.user._id.toString();
+
+  // Role & Authorization Verification
+  if (userRole === "ADMIN") {
+    // Admin is authorized to test original (or resolution)
+  } else if (userRole === "CITIZEN") {
+    if (!isOwner) {
+      throw new ApiError(403, "You do not have permission to test images for complaints filed by other citizens.");
+    }
+    if (target !== "resolution") {
+      throw new ApiError(
+        403,
+        "Citizens may test the municipal resolution proof image. Original complaint submission testing is reserved for municipal administrators during review."
+      );
+    }
+  } else {
+    // STAFF or other roles
+    throw new ApiError(403, "Image authenticity testing is restricted to reviewing administrators and reporting citizens.");
+  }
+
+  // Map target to imageType
+  const imageType = target === "original" ? "BEFORE" : "AFTER";
+
+  // Lookup the trusted ComplaintImage record for this complaint
+  const complaintImage = await ComplaintImage.findOne({
+    complaint: complaint._id,
+    imageType
+  }).sort({ createdAt: -1 });
+
+  if (!complaintImage || !complaintImage.imageUrl) {
+    throw new ApiError(
+      400,
+      target === "original"
+        ? "No original complaint evidence image exists for this complaint."
+        : "No resolution photo has been uploaded by municipal field staff yet."
+    );
+  }
+
+  // Resolve file path safely on server storage (prevents SSRF)
+  const relativePath = complaintImage.imageUrl.replace(/^\//, "");
+  const localFilePath = path.resolve("public", relativePath);
+
+  if (!fs.existsSync(localFilePath)) {
+    throw new ApiError(
+      404,
+      `Evidence image file could not be located on the server filesystem (${path.basename(localFilePath)}).`
+    );
+  }
+
+  // Call the Gemini service on-demand
+  const analysisResult = await analyzeImageAuthenticity({
+    imagePath: localFilePath,
+    imageUrl: complaintImage.imageUrl,
+    metadata: {
+      complaintId: complaint._id,
+      target,
+      complaintNumber: complaint.complaintNumber
+    }
+  });
+
+  // Persist audit record
+  const auditRecord = await ImageAuthenticityTest.create({
+    complaint: complaint._id,
+    complaintImage: complaintImage._id,
+    imageTarget: target,
+    imageUrl: complaintImage.imageUrl,
+    assessment: analysisResult.assessment,
+    confidence: analysisResult.confidence,
+    reasoning: analysisResult.reasoning,
+    limitations: analysisResult.limitations,
+    model: analysisResult.model,
+    testedBy: req.user._id,
+    userRole: req.user.role
+  });
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        testResult: {
+          ...analysisResult,
+          _id: auditRecord._id,
+          imageTarget: target,
+          imageUrl: complaintImage.imageUrl,
+          complaintNumber: complaint.complaintNumber,
+          testedBy: {
+            _id: req.user._id,
+            name: req.user.name,
+            role: req.user.role
+          }
+        }
+      },
+      "Image authenticity analysis completed successfully."
+    )
+  );
+});
+

@@ -5,7 +5,8 @@ import {
   getComplaintById,
   confirmResolution,
   reopenComplaint,
-  getCitizenDashboard
+  getCitizenDashboard,
+  testComplaintImageAuthenticity
 } from "../controllers/complaint.controller.js";
 import { authenticate, authorizeRoles } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/upload.middleware.js";
@@ -25,5 +26,8 @@ router.get("/:id", getComplaintById);
 // Resolution confirmation and reopening
 router.post("/:id/confirm", authorizeRoles("CITIZEN"), confirmResolution);
 router.post("/:id/reopen", authorizeRoles("CITIZEN"), reopenComplaint);
+
+// On-Demand AI Image Authenticity Test (strictly manual button click)
+router.post("/:id/image-authenticity-test", testComplaintImageAuthenticity);
 
 export default router;

@@ -5,6 +5,7 @@ import StatusBadge from "../../components/StatusBadge";
 import PriorityBadge from "../../components/PriorityBadge";
 import TimelineView from "../../components/TimelineView";
 import BeforeAfterComparison from "../../components/BeforeAfterComparison";
+import ImageAuthenticityTest from "../../components/ImageAuthenticityTest";
 import { complaintApi, getImageUrl } from "../../api/client";
 import {
   ArrowLeft,
@@ -130,7 +131,8 @@ export const CitizenComplaintDetail = () => {
     );
   }
 
-  const { complaint, beforeImage, afterImage, progressImages, timeline } = complaintData;
+  const { complaint, beforeImage, afterImage, progressImages, timeline, authenticityTests } = complaintData;
+  const resolutionTest = authenticityTests?.find((t) => t.imageTarget === "resolution") || null;
   const beforePhotoUrl = beforeImage ? getImageUrl(beforeImage?.imageUrl || beforeImage) : null;
 
   return (
@@ -366,6 +368,19 @@ export const CitizenComplaintDetail = () => {
               afterImage={afterImage}
               progressImages={progressImages}
               theme="light"
+              afterAction={
+                <ImageAuthenticityTest
+                  complaintId={complaint._id || id}
+                  target="resolution"
+                  hasImage={Boolean(afterImage)}
+                  imageLabel="Staff Resolution Proof (AFTER Photo)"
+                  disabledMessage="Resolution photo has not been uploaded yet by municipal field staff."
+                  existingTest={resolutionTest}
+                  onTestComplete={() => {
+                    fetchDetails();
+                  }}
+                />
+              }
             />
           </div>
         </div>

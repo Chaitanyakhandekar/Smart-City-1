@@ -5,6 +5,7 @@ import StatusBadge from "../../components/StatusBadge";
 import PriorityBadge from "../../components/PriorityBadge";
 import TimelineView from "../../components/TimelineView";
 import BeforeAfterComparison from "../../components/BeforeAfterComparison";
+import ImageAuthenticityTest from "../../components/ImageAuthenticityTest";
 import { complaintApi, adminApi } from "../../api/client";
 import {
   ArrowLeft,
@@ -171,7 +172,8 @@ export const AdminComplaintDetail = () => {
     );
   }
 
-  const { complaint, beforeImage, afterImage, progressImages, timeline } = complaintData;
+  const { complaint, beforeImage, afterImage, progressImages, timeline, authenticityTests } = complaintData;
+  const originalTest = authenticityTests?.find((t) => t.imageTarget === "original") || null;
   const hasAiConfidence = typeof complaint.aiConfidence === "number" && complaint.aiConfidence > 0;
   const confidencePct = hasAiConfidence ? Math.round(complaint.aiConfidence * 100) : null;
 
@@ -438,13 +440,32 @@ export const AdminComplaintDetail = () => {
 
       {/* BEFORE / AFTER PHOTO VERIFICATION */}
       <div className="bg-white rounded-2xl p-6 border border-[#E2E8F0] shadow-xs space-y-4">
-        <h3 className="text-sm font-bold text-[#0F172A]">
-          Photographic Proofs
-        </h3>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h3 className="text-sm font-bold text-[#0F172A]">
+            Photographic Proofs & Evidence Verification
+          </h3>
+          <span className="text-xs text-[#64748B]">
+            Original Citizen Evidence & Staff Resolution Proofs
+          </span>
+        </div>
         <BeforeAfterComparison
           beforeImage={beforeImage}
           afterImage={afterImage}
           progressImages={progressImages}
+          theme="light"
+          beforeAction={
+            <ImageAuthenticityTest
+              complaintId={complaint._id || id}
+              target="original"
+              hasImage={Boolean(beforeImage)}
+              imageLabel="Citizen Complaint Evidence (Original Photo)"
+              disabledMessage="No original image was submitted with this complaint."
+              existingTest={originalTest}
+              onTestComplete={() => {
+                fetchComplaintAndStaff();
+              }}
+            />
+          }
         />
       </div>
 
