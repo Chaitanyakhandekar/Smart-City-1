@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 export const SmartCityLogo = ({ variant = "dark", size = "md", to = "/" }) => {
-  const isLight = variant === "light"; // light text for dark navy sidebars
+  const isDarkText = variant === "dark-text";
   
   const iconSizes = {
     sm: "w-7 h-7",
@@ -31,8 +31,8 @@ export const SmartCityLogo = ({ variant = "dark", size = "md", to = "/" }) => {
       </div>
 
       <div className="flex flex-col leading-none">
-        <span className={`font-extrabold tracking-tight ${textSizes[size] || textSizes.md} text-white`}>
-          Smart<span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400">City</span>
+        <span className={`font-extrabold tracking-tight ${textSizes[size] || textSizes.md} ${isDarkText ? "text-[#0F172A]" : "text-white"}`}>
+          Smart<span className={isDarkText ? "text-[#0D9488]" : "text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400"}>City</span>
         </span>
       </div>
     </div>
