@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import CitizenSidebar from "./CitizenSidebar";
 import CitizenHeader from "./CitizenHeader";
 import ChatbotWidget from "../ChatbotWidget";
+import MobileNavBottom from "../MobileNavBottom";
 
 export const CitizenLayout = ({
   children,
@@ -32,13 +33,16 @@ export const CitizenLayout = ({
           actions={actions}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-7 min-w-0 space-y-6 max-w-[1600px] w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-7 pb-24 sm:pb-28 lg:pb-7 min-w-0 space-y-6 max-w-[1600px] w-full mx-auto">
           {children}
         </main>
       </div>
 
       {/* Smart Assistant Chatbot Widget */}
       <ChatbotWidget />
+
+      {/* Mobile Responsive Bottom Navigation Bar */}
+      <MobileNavBottom />
     </div>
   );
 };

@@ -1,283 +1,230 @@
-import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import React from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/authContex";
 import { useNotification } from "../context/notificationContext";
 import {
   Home,
+  LayoutDashboard,
   FileText,
+  Plus,
   Bell,
   User,
-  PlusCircle,
-  Users,
-  BarChart3,
-  MoreHorizontal,
-  X,
-  LogOut,
-  Shield
+  ClipboardList
 } from "lucide-react";
 
+/**
+ * MobileNavBottom
+ *
+ * Polished, responsive mobile bottom navigation bar:
+ * - Visible strictly on mobile / small-screen devices (< lg: 1024px).
+ * - Hidden on desktop (lg:hidden) preserving desktop sidebar navigation.
+ * - Stays fixed at the bottom while scrolling.
+ * - Respects mobile safe-area insets (env(safe-area-inset-bottom)).
+ * - Accurately highlights active route (including nested complaint/task detail pages).
+ * - Real-time notification badge dynamically synchronized with unreadCount.
+ * - Clean light-theme matching SmartCity design tokens.
+ */
 export const MobileNavBottom = () => {
-  const { user, role, logout } = useAuth();
+  const { user, role } = useAuth();
   const { unreadCount } = useNotification();
-  const navigate = useNavigate();
-  const [showMore, setShowMore] = useState(false);
+  const location = useLocation();
+  const currentPath = location.pathname;
 
   if (!user) return null;
 
-  const handleLogout = () => {
-    setShowMore(false);
-    logout();
-    navigate("/login");
+  // Active route matching helper supporting nested routes
+  const isItemActive = (item) => {
+    if (item.exact) {
+      return currentPath === item.path;
+    }
+    if (currentPath === item.path) return true;
+    if (item.matchNested && currentPath.startsWith(item.path)) return true;
+    if (
+      Array.isArray(item.additionalMatches) &&
+      item.additionalMatches.some((match) => currentPath.startsWith(match))
+    ) {
+      return true;
+    }
+    return false;
   };
 
-  if (role === "ADMIN") {
-    return (
-      <>
-        {showMore && (
-          <div
-            className="md:hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex flex-col justify-end animate-in fade-in"
-            onClick={() => setShowMore(false)}
-          >
-            <div
-              className="bg-[#0F172A] rounded-t-3xl p-5 border-t border-slate-800 shadow-2xl space-y-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-purple-400" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-white">
-                    Admin Navigation
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowMore(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+  // Build role-specific navigation destinations
+  let navItems = [];
 
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <NavLink
-                  to="/admin/notifications"
-                  onClick={() => setShowMore(false)}
-                  className="p-3 rounded-xl bg-[#070B14] hover:bg-purple-950/30 border border-slate-800 flex items-center gap-2 font-semibold text-slate-300 hover:text-purple-300 transition-colors"
-                >
-                  <Bell className="w-4 h-4 text-purple-400" /> Notifications
-                </NavLink>
-                <NavLink
-                  to="/admin/profile"
-                  onClick={() => setShowMore(false)}
-                  className="p-3 rounded-xl bg-[#070B14] hover:bg-purple-950/30 border border-slate-800 flex items-center gap-2 font-semibold text-slate-300 hover:text-purple-300 transition-colors"
-                >
-                  <User className="w-4 h-4 text-purple-400" /> My Profile
-                </NavLink>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="w-full p-3 rounded-xl bg-rose-500/10 text-rose-300 border border-rose-500/30 flex items-center justify-center gap-2 text-xs font-bold hover:bg-rose-500/20 transition-colors"
-              >
-                <LogOut className="w-4 h-4" /> Sign Out
-              </button>
-            </div>
-          </div>
-        )}
-
-        <nav
-          className="md:hidden fixed bottom-0 left-0 right-0 min-h-[4rem] pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-[#0B1120]/95 backdrop-blur-md border-t border-slate-800 z-40 flex items-center justify-around px-2 shadow-2xl"
-          aria-label="Mobile Navigation"
-        >
-          <NavLink
-            to="/admin/dashboard"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-purple-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-              }`
-            }
-          >
-            <Home className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px] tracking-tight">Home</span>
-          </NavLink>
-
-          <NavLink
-            to="/admin/complaints"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-purple-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-              }`
-            }
-          >
-            <FileText className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px] tracking-tight">Complaints</span>
-          </NavLink>
-
-          <NavLink
-            to="/admin/staff"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-purple-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-              }`
-            }
-          >
-            <Users className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px] tracking-tight">Staff</span>
-          </NavLink>
-
-          <NavLink
-            to="/admin/analytics"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-purple-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-              }`
-            }
-          >
-            <BarChart3 className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px] tracking-tight">Analytics</span>
-          </NavLink>
-
-          <button
-            type="button"
-            onClick={() => setShowMore(true)}
-            className="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-white font-medium transition-colors"
-          >
-            <div className="relative">
-              <MoreHorizontal className="w-5 h-5 mb-0.5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-rose-600 ring-2 ring-white" />
-              )}
-            </div>
-            <span className="text-[10px] tracking-tight">More</span>
-          </button>
-        </nav>
-      </>
-    );
+  if (role === "CITIZEN") {
+    navItems = [
+      {
+        name: "Home",
+        path: "/citizen/dashboard",
+        icon: Home,
+        exact: true
+      },
+      {
+        name: "Complaints",
+        path: "/citizen/complaints",
+        icon: FileText,
+        matchNested: true
+      },
+      {
+        name: "Report",
+        path: "/citizen/report",
+        icon: Plus,
+        isCenterAction: true
+      },
+      {
+        name: "Alerts",
+        path: "/citizen/notifications",
+        icon: Bell,
+        hasBadge: true
+      },
+      {
+        name: "Profile",
+        path: "/citizen/profile",
+        icon: User
+      }
+    ];
+  } else if (role === "STAFF") {
+    navItems = [
+      {
+        name: "Dashboard",
+        path: "/staff/dashboard",
+        icon: LayoutDashboard,
+        exact: true
+      },
+      {
+        name: "Assigned",
+        path: "/staff/tasks",
+        icon: ClipboardList,
+        matchNested: true,
+        additionalMatches: ["/staff/complaints"]
+      },
+      {
+        name: "Alerts",
+        path: "/staff/notifications",
+        icon: Bell,
+        hasBadge: true
+      },
+      {
+        name: "Profile",
+        path: "/staff/profile",
+        icon: User
+      }
+    ];
+  } else if (role === "ADMIN") {
+    navItems = [
+      {
+        name: "Dashboard",
+        path: "/admin/dashboard",
+        icon: LayoutDashboard,
+        exact: true
+      },
+      {
+        name: "Complaints",
+        path: "/admin/complaints",
+        icon: FileText,
+        matchNested: true
+      },
+      {
+        name: "Alerts",
+        path: "/admin/notifications",
+        icon: Bell,
+        hasBadge: true
+      },
+      {
+        name: "Profile",
+        path: "/admin/profile",
+        icon: User
+      }
+    ];
+  } else {
+    return null;
   }
 
-  if (role === "STAFF") {
-    return (
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 min-h-[4rem] pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-[#0B1120]/95 backdrop-blur-md border-t border-slate-800 z-40 flex items-center justify-around px-2 shadow-2xl"
-        aria-label="Mobile Navigation"
-      >
-        <NavLink
-          to="/staff/dashboard"
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-amber-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-            }`
-          }
-        >
-          <Home className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight">Home</span>
-        </NavLink>
-
-        <NavLink
-          to="/staff/tasks"
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-amber-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-            }`
-          }
-        >
-          <FileText className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight">Tasks</span>
-        </NavLink>
-
-        <NavLink
-          to="/staff/notifications"
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-amber-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-            }`
-          }
-        >
-          <div className="relative">
-            <Bell className="w-5 h-5 mb-0.5" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] tracking-tight">Alerts</span>
-        </NavLink>
-
-        <NavLink
-          to="/staff/profile"
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-amber-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-            }`
-          }
-        >
-          <User className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight">Profile</span>
-        </NavLink>
-      </nav>
-    );
-  }
-
-  // CITIZEN ROLE
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 min-h-[4rem] pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-[#0B1120]/95 backdrop-blur-md border-t border-slate-800 z-40 flex items-center justify-around px-2 shadow-2xl"
-      aria-label="Mobile Navigation"
+      className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E2E8F0] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 pt-1.5 pb-[max(0.4rem,env(safe-area-inset-bottom,0px))] flex items-center justify-around select-none"
+      aria-label="Mobile Bottom Navigation"
     >
-      <NavLink
-        to="/citizen/dashboard"
-        className={({ isActive }) =>
-          `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-teal-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-          }`
-        }
-      >
-        <Home className="w-5 h-5 mb-0.5" />
-        <span className="text-[10px] tracking-tight">Home</span>
-      </NavLink>
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const active = isItemActive(item);
 
-      <NavLink
-        to="/citizen/complaints"
-        className={({ isActive }) =>
-          `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-teal-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-          }`
+        // Center Action Button (e.g. Citizen Report Complaint)
+        if (item.isCenterAction) {
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              aria-label="Report a new civic issue"
+              aria-current={active ? "page" : undefined}
+              className="flex flex-col items-center justify-center flex-1 -mt-4 relative group focus:outline-none"
+            >
+              <div
+                className={`w-12 h-12 rounded-full flex items-center justify-center shadow-md transition-all duration-200 active:scale-95 ${
+                  active
+                    ? "bg-[#0D9488] text-white shadow-teal-500/30 ring-4 ring-white scale-105"
+                    : "bg-[#0D9488] hover:bg-[#0f766e] text-white shadow-teal-500/25 ring-4 ring-white"
+                }`}
+              >
+                <Plus className="w-6 h-6 stroke-[2.75]" />
+              </div>
+              <span
+                className={`text-[10px] font-bold tracking-tight mt-1 transition-colors ${
+                  active ? "text-[#0D9488]" : "text-[#475569]"
+                }`}
+              >
+                {item.name}
+              </span>
+            </NavLink>
+          );
         }
-      >
-        <FileText className="w-5 h-5 mb-0.5" />
-        <span className="text-[10px] tracking-tight">Complaints</span>
-      </NavLink>
 
-      <NavLink
-        to="/citizen/report"
-        className="flex flex-col items-center justify-center flex-1 py-1"
-      >
-        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 flex items-center justify-center shadow-lg shadow-teal-500/30 -mt-5 font-bold hover:scale-105 transition-transform">
-          <PlusCircle className="w-5 h-5" />
-        </div>
-        <span className="text-[10px] font-bold text-teal-400 tracking-tight mt-0.5">Report</span>
-      </NavLink>
+        // Standard Navigation Tab
+        return (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            aria-label={item.name}
+            aria-current={active ? "page" : undefined}
+            className={`flex flex-col items-center justify-center flex-1 py-1 min-h-[46px] rounded-xl transition-all relative focus:outline-none ${
+              active
+                ? "text-[#0D9488] font-bold"
+                : "text-[#64748B] hover:text-[#0F172A] font-medium"
+            }`}
+          >
+            <div className="relative flex items-center justify-center">
+              <Icon
+                className={`w-5 h-5 transition-transform duration-200 ${
+                  active ? "scale-110 stroke-[2.5]" : "stroke-[1.75]"
+                }`}
+              />
 
-      <NavLink
-        to="/citizen/notifications"
-        className={({ isActive }) =>
-          `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-teal-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-          }`
-        }
-      >
-        <div className="relative">
-          <Bell className="w-5 h-5 mb-0.5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1.5 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
-              {unreadCount > 9 ? "9+" : unreadCount}
+              {/* Notification Badge */}
+              {item.hasBadge && unreadCount > 0 && (
+                <span
+                  className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-2xs leading-none"
+                  aria-label={`${unreadCount} unread alerts`}
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </div>
+
+            <span
+              className={`text-[10.5px] tracking-tight mt-0.5 leading-tight transition-colors ${
+                active ? "text-[#0D9488] font-bold" : "text-[#64748B]"
+              }`}
+            >
+              {item.name}
             </span>
-          )}
-        </div>
-        <span className="text-[10px] tracking-tight">Alerts</span>
-      </NavLink>
 
-      <NavLink
-        to="/citizen/profile"
-        className={({ isActive }) =>
-          `flex flex-col items-center justify-center flex-1 py-1 transition-colors ${isActive ? "text-teal-400 font-bold" : "text-slate-400 hover:text-white font-medium"
-          }`
-        }
-      >
-        <User className="w-5 h-5 mb-0.5" />
-        <span className="text-[10px] tracking-tight">Profile</span>
-      </NavLink>
+            {/* Subtle active indicator dot */}
+            {active && (
+              <span className="w-1.5 h-1 rounded-full bg-[#0D9488] mt-0.5 animate-in fade-in zoom-in-75 duration-150" />
+            )}
+          </NavLink>
+        );
+      })}
     </nav>
   );
 };

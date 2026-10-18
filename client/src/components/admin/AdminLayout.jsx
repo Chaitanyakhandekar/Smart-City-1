@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
+import MobileNavBottom from "../MobileNavBottom";
 
 export const AdminLayout = ({
   children,
@@ -31,10 +32,13 @@ export const AdminLayout = ({
           actions={actions}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-7 min-w-0 space-y-6 max-w-[1600px] w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-7 pb-24 sm:pb-28 lg:pb-7 min-w-0 space-y-6 max-w-[1600px] w-full mx-auto">
           {children}
         </main>
       </div>
+
+      {/* Mobile Responsive Bottom Navigation Bar */}
+      <MobileNavBottom />
     </div>
   );
 };
