@@ -8,3 +8,8 @@ client/.vscode
 __pycache__/
 *.py[cod]
 ai/.env
+.venv/
+ai/.venv/
+ai/data/
+*.pth
+*.pt

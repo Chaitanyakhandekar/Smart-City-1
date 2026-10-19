@@ -1,0 +1,66 @@
+{
+  "test_samples": [
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Drainage\\drainage_010.jpg",
+      0
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Water Supply\\water_supply_014.jpg",
+      4
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Waste Management\\waste_management_012.jpg",
+      3
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Roads\\roads_014.jpg",
+      2
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Other\\other_002.jpg",
+      1
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Water Supply\\water_supply_001.jpg",
+      4
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Drainage\\drainage_007.jpg",
+      0
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Waste Management\\waste_management_002.jpg",
+      3
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Other\\other_012.jpg",
+      1
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Roads\\roads_003.jpg",
+      2
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Drainage\\drainage_008.jpg",
+      0
+    ],
+    [
+      "D:\\safe\\smart-city\\ai\\data\\Waste Management\\waste_management_009.jpg",
+      3
+    ]
+  ],
+  "class_names": [
+    "Drainage",
+    "Other",
+    "Roads",
+    "Waste Management",
+    "Water Supply"
+  ],
+  "class_to_idx": {
+    "Drainage": 0,
+    "Other": 1,
+    "Roads": 2,
+    "Waste Management": 3,
+    "Water Supply": 4
+  }
+}

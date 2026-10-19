@@ -162,7 +162,9 @@ async function queryMicroserviceAI(imagePath, description) {
         department: data.department || "",
         isFallback: Boolean(data.isFallback),
         source: data.source || "ai-microservice",
-        serviceStatus: `AI Microservice connected (${data.source || "local"})`,
+        model: data.model || "MobileNetV3-Small-Civic",
+        topPredictions: data.top_predictions || [],
+        serviceStatus: `AI Microservice connected (${data.model || data.source || "mobilenet-v3"})`,
       };
     }
   } catch {

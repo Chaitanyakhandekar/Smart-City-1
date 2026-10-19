@@ -1,7 +1,7 @@
 """
 Smart City Civic AI Microservice (Flask Web API)
 Exposes REST endpoints for civic issue classification, health checks,
-and category schema validation.
+and category schema validation. Integrated with PyTorch MobileNetV3 Small.
 """
 
 import os
@@ -13,7 +13,6 @@ from flask import Flask, request, jsonify
 try:
     from dotenv import load_dotenv
     load_dotenv()
-    # Also attempt loading root/server .env if present
     root_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), "server", ".env")
     if os.path.exists(root_env):
         load_dotenv(root_env)
@@ -21,12 +20,14 @@ except ImportError:
     pass
 
 from schemas import CIVIC_TAXONOMY, validate_category, validate_subcategory
-from classifier import classify_complaint
+from classifier import classify_complaint, get_model_status
 from utils import cleanup_temp_file
 
 app = Flask(__name__)
 
-# Enable CORS manually so dependencies remain lightweight
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+
+
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
@@ -37,14 +38,28 @@ def add_cors_headers(response):
 
 @app.route("/health", methods=["GET"])
 def health():
-    """Service health and capability probe."""
+    """
+    Comprehensive service health, capability, and model status probe.
+    Reports honestly whether the neural network weights are loaded into memory.
+    """
     gemini_key = os.environ.get("GEMINI_API_KEY")
+    model_status = get_model_status()
+
     return jsonify({
         "status": "online",
         "service": "Smart City Civic AI Microservice",
         "version": "1.0.0",
         "port": int(os.environ.get("AI_PORT", 8000)),
+        "modelLoaded": model_status.get("loaded", False),
+        "modelName": model_status.get("model_name"),
+        "modelArchitecture": model_status.get("architecture"),
+        "modelDevice": model_status.get("device"),
+        "modelClasses": model_status.get("classes", []),
+        "modelNumClasses": model_status.get("num_classes", 0),
+        "modelLoadTimeMs": model_status.get("load_time_ms", 0.0),
+        "modelError": model_status.get("error"),
         "capabilities": [
+            "mobilenet_v3_small_transfer_learning",
             "multimodal-vision-inspection",
             "civic-taxonomy-classification",
             "emergency-hazard-escalation",
@@ -103,7 +118,12 @@ def analyze():
         if "image" in request.files:
             file = request.files["image"]
             if file and file.filename != "":
-                ext = os.path.splitext(file.filename)[1] or ".jpg"
+                ext = os.path.splitext(file.filename)[1].lower() or ".jpg"
+                if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                    return jsonify({
+                        "error": f"Unsupported image format '{ext}'. Allowed formats: {list(ALLOWED_IMAGE_EXTENSIONS)}"
+                    }), 400
+
                 fd, temp_path = tempfile.mkstemp(suffix=ext)
                 os.close(fd)
                 file.save(temp_path)
@@ -115,10 +135,12 @@ def analyze():
         b64_image = data.get("image_base64")
         if b64_image:
             try:
-                # Strip data URL header if present (e.g. data:image/png;base64,...)
                 if "," in b64_image:
                     b64_image = b64_image.split(",", 1)[1]
                 img_bytes = base64.b64decode(b64_image)
+                if len(img_bytes) == 0:
+                    return jsonify({"error": "Received empty image_base64 payload."}), 400
+
                 fd, temp_path = tempfile.mkstemp(suffix=".jpg")
                 os.close(fd)
                 with open(temp_path, "wb") as f:
