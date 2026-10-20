@@ -11,5 +11,5 @@ ai/.env
 .venv/
 ai/.venv/
 ai/data/
-*.pth
-*.pt
+
+
