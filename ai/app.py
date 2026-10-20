@@ -1,49 +1,144 @@
+
 """
 Smart City Civic AI Microservice (Flask Web API)
-Exposes REST endpoints for civic issue classification, health checks,
-and category schema validation. Integrated with PyTorch MobileNetV3 Small.
+
+Features:
+- Civic issue classification using MobileNetV3 and optional LLM integration
+- Health checks and model status
+- Civic category and subcategory validation
+- Live terminal logging for requests, predictions, timing, and errors
+- Safe temporary image cleanup
 """
 
 import os
 import tempfile
 import base64
-from flask import Flask, request, jsonify
+import logging
+import time
 
-# Load environment variables if python-dotenv is installed
+from flask import Flask, request, jsonify, g
+
+# --------------------------------------------------
+# Logging configuration
+# --------------------------------------------------
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    force=True,
+)
+
+logger = logging.getLogger("smartcity-ai")
+
+# --------------------------------------------------
+# Load environment variables
+# --------------------------------------------------
+
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
-    root_env = os.path.join(os.path.dirname(os.path.dirname(__file__)), "server", ".env")
+
+    root_env = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "server",
+        ".env",
+    )
+
     if os.path.exists(root_env):
         load_dotenv(root_env)
-except ImportError:
-    pass
 
-from schemas import CIVIC_TAXONOMY, validate_category, validate_subcategory
+except ImportError:
+    logger.info("python-dotenv not installed; using existing environment variables")
+
+# --------------------------------------------------
+# Application imports
+# --------------------------------------------------
+
+from schemas import (
+    CIVIC_TAXONOMY,
+    validate_category,
+    validate_subcategory,
+)
+
 from classifier import classify_complaint, get_model_status
 from utils import cleanup_temp_file
 
+# --------------------------------------------------
+# Flask application
+# --------------------------------------------------
+
 app = Flask(__name__)
 
-ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+ALLOWED_IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".bmp",
+}
+
+# --------------------------------------------------
+# Request logging
+# --------------------------------------------------
+
+@app.before_request
+def log_request():
+    g.request_start_time = time.perf_counter()
+
+    logger.info(
+        "REQUEST | %s %s",
+        request.method,
+        request.path,
+    )
 
 
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
-    response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = (
+        "Content-Type,Authorization"
+    )
+    response.headers["Access-Control-Allow-Methods"] = (
+        "GET,POST,OPTIONS"
+    )
+
+    start_time = getattr(g, "request_start_time", None)
+
+    if start_time is not None:
+        duration_ms = (
+            time.perf_counter() - start_time
+        ) * 1000
+
+        logger.info(
+            "RESPONSE | %s %s | Status: %s | Duration: %.2f ms",
+            request.method,
+            request.path,
+            response.status_code,
+            duration_ms,
+        )
+
     return response
 
 
+# --------------------------------------------------
+# Health endpoint
+# --------------------------------------------------
+
 @app.route("/health", methods=["GET"])
 def health():
-    """
-    Comprehensive service health, capability, and model status probe.
-    Reports honestly whether the neural network weights are loaded into memory.
-    """
+    """Return service and model health information."""
+
     gemini_key = os.environ.get("GEMINI_API_KEY")
     model_status = get_model_status()
+
+    logger.info(
+        "HEALTH CHECK | Model loaded: %s | Model: %s | Device: %s",
+        model_status.get("loaded", False),
+        model_status.get("model_name"),
+        model_status.get("device"),
+    )
 
     return jsonify({
         "status": "online",
@@ -64,120 +159,297 @@ def health():
             "civic-taxonomy-classification",
             "emergency-hazard-escalation",
             "department-routing",
-            "dual-engine-local-and-gemini"
+            "dual-engine-local-and-gemini",
         ],
-        "geminiConfigured": bool(gemini_key)
+        "geminiConfigured": bool(gemini_key),
     }), 200
 
+
+# --------------------------------------------------
+# Categories endpoint
+# --------------------------------------------------
 
 @app.route("/categories", methods=["GET"])
 def get_categories():
-    """Returns the civic master taxonomy with subcategories and departments."""
+    """Return civic categories, departments, and subcategories."""
+
     summary = {}
-    for cat, info in CIVIC_TAXONOMY.items():
-        summary[cat] = {
+
+    for category, info in CIVIC_TAXONOMY.items():
+        summary[category] = {
             "department": info.get("department", ""),
             "subcategories": info.get("subcategories", []),
-            "defaultPriority": info.get("default_priority", "MEDIUM")
+            "defaultPriority": info.get(
+                "default_priority",
+                "MEDIUM",
+            ),
         }
+
+    logger.info(
+        "CATEGORIES | Returned %d civic categories",
+        len(summary),
+    )
+
     return jsonify({
         "categories": summary,
-        "total": len(summary)
+        "total": len(summary),
     }), 200
 
+
+# --------------------------------------------------
+# Category validation endpoint
+# --------------------------------------------------
 
 @app.route("/validate", methods=["POST"])
 def validate_issue():
-    """Validates if a category and subcategory exist in the taxonomy."""
+    """Validate a civic category and its subcategory."""
+
     data = request.get_json(silent=True) or {}
+
     category = data.get("category", "")
     subcategory = data.get("subcategory", "")
 
-    cat_valid = validate_category(category)
-    sub_valid = validate_subcategory(category, subcategory) if cat_valid else False
+    category_valid = validate_category(category)
+
+    subcategory_valid = (
+        validate_subcategory(category, subcategory)
+        if category_valid
+        else False
+    )
+
+    is_valid = category_valid and (
+        subcategory_valid or not subcategory
+    )
+
+    logger.info(
+        "VALIDATION | Category valid: %s | "
+        "Subcategory valid: %s | Overall valid: %s",
+        category_valid,
+        subcategory_valid,
+        is_valid,
+    )
 
     return jsonify({
-        "categoryValid": cat_valid,
-        "subcategoryValid": sub_valid,
-        "isValid": cat_valid and (sub_valid or not subcategory)
+        "categoryValid": category_valid,
+        "subcategoryValid": subcategory_valid,
+        "isValid": is_valid,
     }), 200
 
+
+# --------------------------------------------------
+# Image analysis endpoint
+# --------------------------------------------------
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
     """
-    Primary civic complaint analysis endpoint.
-    Accepts multipart/form-data or application/json payloads.
+    Analyze a civic complaint.
+
+    Supports:
+    - multipart/form-data with an 'image' file
+    - application/json with an 'image_base64' field
+    - Description-only requests
     """
+
     description = ""
     temp_path = None
 
-    # Handle multipart/form-data
-    if request.content_type and "multipart/form-data" in request.content_type:
-        description = request.form.get("description", "")
-        if "image" in request.files:
-            file = request.files["image"]
-            if file and file.filename != "":
-                ext = os.path.splitext(file.filename)[1].lower() or ".jpg"
-                if ext not in ALLOWED_IMAGE_EXTENSIONS:
-                    return jsonify({
-                        "error": f"Unsupported image format '{ext}'. Allowed formats: {list(ALLOWED_IMAGE_EXTENSIONS)}"
-                    }), 400
-
-                fd, temp_path = tempfile.mkstemp(suffix=ext)
-                os.close(fd)
-                file.save(temp_path)
-
-    # Handle application/json
-    elif request.is_json:
-        data = request.get_json(silent=True) or {}
-        description = data.get("description", "")
-        b64_image = data.get("image_base64")
-        if b64_image:
-            try:
-                if "," in b64_image:
-                    b64_image = b64_image.split(",", 1)[1]
-                img_bytes = base64.b64decode(b64_image)
-                if len(img_bytes) == 0:
-                    return jsonify({"error": "Received empty image_base64 payload."}), 400
-
-                fd, temp_path = tempfile.mkstemp(suffix=".jpg")
-                os.close(fd)
-                with open(temp_path, "wb") as f:
-                    f.write(img_bytes)
-            except Exception as b64_err:
-                print(f"[SmartCity App] Base64 decode warning: {b64_err}")
-
-    # Fallback to form/query parameters
-    else:
-        description = request.form.get("description") or request.args.get("description") or ""
+    logger.info("ANALYSIS | Starting civic complaint analysis")
 
     try:
+        # ------------------------------------------
+        # Handle multipart/form-data
+        # ------------------------------------------
+
+        if (
+            request.content_type
+            and "multipart/form-data" in request.content_type
+        ):
+            description = request.form.get("description", "")
+
+            if "image" in request.files:
+                file = request.files["image"]
+
+                if file and file.filename:
+                    ext = (
+                        os.path.splitext(file.filename)[1].lower()
+                        or ".jpg"
+                    )
+
+                    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                        logger.warning(
+                            "UPLOAD REJECTED | Unsupported extension: %s",
+                            ext,
+                        )
+
+                        return jsonify({
+                            "error": (
+                                f"Unsupported image format '{ext}'. "
+                                "Allowed formats: "
+                                f"{sorted(ALLOWED_IMAGE_EXTENSIONS)}"
+                            )
+                        }), 400
+
+                    fd, temp_path = tempfile.mkstemp(suffix=ext)
+                    os.close(fd)
+
+                    file.save(temp_path)
+
+                    logger.info(
+                        "IMAGE UPLOAD | Image received successfully"
+                    )
+
+        # ------------------------------------------
+        # Handle application/json with base64 image
+        # ------------------------------------------
+
+        elif request.is_json:
+            data = request.get_json(silent=True) or {}
+
+            description = data.get("description", "")
+            b64_image = data.get("image_base64")
+
+            if b64_image:
+                try:
+                    if "," in b64_image:
+                        b64_image = b64_image.split(",", 1)[1]
+
+                    img_bytes = base64.b64decode(
+                        b64_image,
+                        validate=True,
+                    )
+
+                    if not img_bytes:
+                        logger.warning(
+                            "IMAGE UPLOAD | Empty base64 image"
+                        )
+
+                        return jsonify({
+                            "error": (
+                                "Received empty image_base64 payload."
+                            )
+                        }), 400
+
+                    fd, temp_path = tempfile.mkstemp(
+                        suffix=".jpg"
+                    )
+                    os.close(fd)
+
+                    with open(temp_path, "wb") as image_file:
+                        image_file.write(img_bytes)
+
+                    logger.info(
+                        "IMAGE UPLOAD | Base64 image decoded successfully"
+                    )
+
+                except (ValueError, TypeError) as exc:
+                    logger.warning(
+                        "IMAGE UPLOAD | Base64 decoding failed: %s",
+                        exc,
+                    )
+
+                    return jsonify({
+                        "error": "Invalid base64 image payload."
+                    }), 400
+
+        # ------------------------------------------
+        # Handle description-only form/query request
+        # ------------------------------------------
+
+        else:
+            description = (
+                request.form.get("description")
+                or request.args.get("description")
+                or ""
+            )
+
+        logger.info(
+            "ANALYSIS INPUT | Image attached: %s | "
+            "Description provided: %s",
+            bool(temp_path),
+            bool(description.strip()),
+        )
+
+        # ------------------------------------------
+        # Run the classifier
+        # ------------------------------------------
+
+        logger.info("CLASSIFIER | Starting complaint classification")
+
+        inference_start = time.perf_counter()
+
         result = classify_complaint(
             image_path=temp_path,
             description=description,
-            use_llm=True
+            use_llm=True,
         )
+
+        inference_ms = (
+            time.perf_counter() - inference_start
+        ) * 1000
+
+        if not isinstance(result, dict):
+            raise TypeError(
+                "Classifier returned an unexpected response type"
+            )
+
+        logger.info(
+            "CLASSIFICATION COMPLETE | Category: %s | "
+            "Subcategory: %s | Confidence: %s | "
+            "Duration: %.2f ms | Fallback: %s",
+            result.get("category", "Unknown"),
+            result.get("subcategory", "Unknown"),
+            result.get("confidence", "Unknown"),
+            inference_ms,
+            result.get("isFallback", False),
+        )
+
         return jsonify(result), 200
-    except Exception as e:
-        print(f"[SmartCity App] Analysis error: {e}")
+
+    except Exception:
+        logger.exception("ANALYSIS ERROR | Complaint classification failed")
+
         return jsonify({
-            "error": str(e),
+            "error": "Complaint analysis failed",
             "category": "Other",
             "subcategory": "General Issue",
             "priority": "MEDIUM",
             "confidence": 0.5,
             "department": "General Municipal Grievance Cell",
             "reason": "Automated fallback due to processing error",
-            "isFallback": True
+            "isFallback": True,
         }), 500
-    finally:
-        cleanup_temp_file(temp_path)
 
+    finally:
+        if temp_path:
+            try:
+                cleanup_temp_file(temp_path)
+                logger.info(
+                    "CLEANUP | Temporary image file cleaned up"
+                )
+            except Exception:
+                logger.exception(
+                    "CLEANUP ERROR | Failed to clean temporary image"
+                )
+
+
+# --------------------------------------------------
+# Start the service
+# --------------------------------------------------
 
 if __name__ == "__main__":
     port = int(os.environ.get("AI_PORT", 8000))
-    print("=" * 65)
-    print(f"Starting Smart City Civic AI Microservice on http://0.0.0.0:{port}")
-    print("=" * 65)
-    app.run(host="0.0.0.0", port=port, debug=False)
+
+    logger.info("=" * 65)
+    logger.info(
+        "Starting Smart City Civic AI Microservice on "
+        "http://0.0.0.0:%s",
+        port,
+    )
+    logger.info("=" * 65)
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False,
+    )
