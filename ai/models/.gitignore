@@ -1,9 +1,9 @@
 # Ignore large model checkpoints
-*.pth
+
 *.pt
 *.bin
 *.onnx
 
 # But keep configuration and sample metadata
 !model_config.json
-!.gitkeep
+
