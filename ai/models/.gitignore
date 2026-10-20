@@ -1,6 +1,6 @@
 # Ignore large model checkpoints
 
-*.pt
+
 *.bin
 *.onnx
 
