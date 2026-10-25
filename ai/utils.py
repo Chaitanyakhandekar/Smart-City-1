@@ -65,11 +65,21 @@ def extract_image_features(image_path: Optional[str]) -> ImageFeatures:
     """
     features = ImageFeatures(valid=False)
 
-    if not image_path or not os.path.exists(image_path):
+    if not image_path:
+        features.error = "No image path provided"
+        return features
+
+    if not os.path.exists(image_path):
+        features.error = f"Image file not found: {image_path}"
+        return features
+
+    if os.path.getsize(image_path) == 0:
+        features.error = "Image file is empty (0 bytes)"
         return features
 
     if not PIL_AVAILABLE:
         # Pillow not installed; return default valid=False
+        features.error = "Pillow (PIL) is not installed in the Python environment"
         return features
 
     try:
@@ -115,8 +125,9 @@ def extract_image_features(image_path: Optional[str]) -> ImageFeatures:
                 features.is_greenish = True
 
     except Exception as e:
-        print(f"[SmartCity AI Utils] Image inspection warning: {e}")
         features.valid = False
+        features.error = str(e)
+        print(f"[SmartCity AI Utils] Image inspection warning: {e}")
 
     return features
 

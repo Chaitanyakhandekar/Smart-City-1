@@ -320,39 +320,84 @@ def classify_with_gemini(
         return None
 
 
-def classify_local(
+def classify_heuristic_vision(
     image_path: Optional[str] = None,
     description: str = "",
-    fallback_reason: str = "Automated rule-based heuristic classification",
     request_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Keyword and sensory heuristic classifier used as a fallback when
-    neither MobileNetV3 neural model nor Gemini cloud LLM is active.
-    Honesty policy: Always marked as isFallback=True, predictionSource='rules'.
+    Primary and exclusive heuristic vision classification engine for civic complaints.
+    Analyzes visual features (brightness, contrast, dominant tint: greyish asphalt,
+    dark nighttime scene, wet bluish-green liquid, greenish foliage) combined with
+    lexical keyword matching and emergency safety hazard escalation.
+
+    Operates 100% locally on CPU without neural network overhead or paid external APIs.
+    MobileNetV3 is NEVER invoked in this classification pipeline.
     """
+    has_image = bool(image_path)
     text = clean_text(description)
-    img_features = extract_image_features(image_path)
     is_hazard, hazard_priority, matched_hazards = detect_hazard_keywords(text)
 
+    # 1. Feature extraction & image inspection
+    img_features = extract_image_features(image_path)
+
+    # Handled failure case: image was provided but failed decoding or verification
+    if has_image and not img_features.valid:
+        error_msg = img_features.error or "Corrupt or unreadable image file"
+        print(f"[Heuristic Vision Error] [{request_id}] Image analysis failed: {error_msg}")
+
+        # Preserve emergency hazard escalation if text description has hazard keywords
+        priority = hazard_priority if is_hazard else PRIORITY_MEDIUM
+        reason = f"Heuristic vision analysis failed: {error_msg}. Categorized as Other."
+        if is_hazard:
+            reason += f" Escalated to {priority} due to hazard indicators: [{', '.join(matched_hazards)}]."
+
+        result = ClassificationResult(
+            category="Other",
+            subcategory="General Issue",
+            priority=priority,
+            confidence=0.50,
+            reason=reason,
+            department=get_department_for_category("Other"),
+            model="SmartCity-HeuristicVision-v1.0",
+            isFallback=True,
+            source="heuristic",
+            predictionSource="heuristic",
+            predictedCategory="Other",
+            predictedSubcategory="General Issue",
+            modelLoaded=MOBILENET_LOADER.is_loaded,
+            modelVersion=None,
+            fallbackUsed=True,
+            fallbackReason=f"Heuristic vision error: {error_msg}",
+            requestId=request_id,
+            features=None,
+            error=error_msg,
+        )
+        res_dict = result.to_dict()
+        res_dict["top_predictions"] = [
+            {"category": "Other", "confidence": 0.50}
+        ]
+        return res_dict
+
+    # 2. Heuristic scoring across civic taxonomy
     scores: Dict[str, float] = {}
 
     for cat, data in CIVIC_TAXONOMY.items():
         score = 0.0
 
-        # 1. Keyword matching
+        # Lexical keyword matching
         for kw in data["keywords"]:
             if re.search(r"\b" + re.escape(kw) + r"\b", text):
                 score += 3.0
             elif kw in text:
                 score += 1.5
 
-        # 2. Category-specific hazard keyword bonus
+        # Category-specific hazard keyword bonus
         for h_kw in data.get("hazard_keywords", []):
             if h_kw in text:
                 score += 3.5
 
-        # 3. Multimodal computer vision feature correlation
+        # Multimodal computer vision feature correlation
         if cat in ["Street Light", "Street Infrastructure"] and img_features.is_dark:
             score += 2.5
 
@@ -371,9 +416,18 @@ def classify_local(
     highest_score = scores[best_cat]
 
     if highest_score <= 0:
-        # If dark image with no text, suggest Street Light or Waste Management
+        # Visual heuristic defaults when no keywords matched
         if img_features.is_dark and not text:
             best_cat = "Street Light"
+            confidence = 0.60
+        elif img_features.is_greyish and not text:
+            best_cat = "Roads"
+            confidence = 0.60
+        elif img_features.is_wet_blue and not text:
+            best_cat = "Drainage"
+            confidence = 0.60
+        elif img_features.is_greenish and not text:
+            best_cat = "Public Property"
             confidence = 0.60
         else:
             best_cat = "Waste Management" if not text else "Other"
@@ -383,7 +437,7 @@ def classify_local(
 
     cat_data = CIVIC_TAXONOMY[best_cat]
 
-    # Select best subcategory
+    # 3. Subcategory mapping based on text tokens
     selected_sub = cat_data["subcategories"][0]
     for sub in cat_data["subcategories"]:
         sub_tokens = [w.lower() for w in re.findall(r"\w+", sub)]
@@ -391,15 +445,38 @@ def classify_local(
             selected_sub = sub
             break
 
+    # 4. Priority evaluation and emergency safety hazard escalation
     priority = cat_data["default_priority"]
-    reason = f"{fallback_reason}: {best_cat} ({selected_sub})."
-
     if is_hazard:
         priority = hazard_priority
-        hazard_list_str = ", ".join(matched_hazards)
-        reason += f" Escalated to {priority} due to hazard indicators: [{hazard_list_str}]."
 
+    # 5. Department routing
     department = get_department_for_category(best_cat)
+
+    # 6. Explanation construction
+    visual_indicators = []
+    if img_features.is_dark:
+        visual_indicators.append("dark/nighttime illumination")
+    if img_features.is_greyish:
+        visual_indicators.append("greyish asphalt/road surface")
+    if img_features.is_wet_blue:
+        visual_indicators.append("wet/fluid reflection")
+    if img_features.is_greenish:
+        visual_indicators.append("greenery/vegetation")
+
+    reason = f"Classified by heuristic vision engine: {best_cat} ({selected_sub})."
+    if visual_indicators:
+        reason += f" Visual indicators: [{', '.join(visual_indicators)}]."
+    if is_hazard:
+        hazard_list_str = ", ".join(matched_hazards)
+        reason += f" Escalated to {priority} due to critical hazard indicators: [{hazard_list_str}]."
+
+    # 7. Top predictions formatted from heuristic scoring matrix
+    sorted_cats = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:3]
+    top_preds = []
+    for cat_name, sc in sorted_cats:
+        c_val = round(confidence, 4) if cat_name == best_cat else round(max(0.10, min(0.60, 0.20 + max(0.0, sc) * 0.04)), 4)
+        top_preds.append({"category": cat_name, "confidence": c_val})
 
     result = ClassificationResult(
         category=best_cat,
@@ -408,118 +485,106 @@ def classify_local(
         confidence=confidence,
         reason=reason,
         department=department,
-        model="Heuristic-Keyword-Fallback",
-        isFallback=True,
-        source="local-heuristic-fallback",
-        predictionSource="rules",
+        model="SmartCity-HeuristicVision-v1.0",
+        isFallback=False,
+        source="heuristic",
+        predictionSource="heuristic",
         predictedCategory=best_cat,
         predictedSubcategory=selected_sub,
         modelLoaded=MOBILENET_LOADER.is_loaded,
         modelVersion=None,
-        fallbackUsed=True,
-        fallbackReason=fallback_reason,
+        fallbackUsed=False,
+        fallbackReason=None,
         requestId=request_id,
-        features=img_features.to_dict() if img_features.valid else None
+        features=img_features.to_dict() if img_features.valid else None,
+        error=None,
     )
 
-    return result.to_dict()
+    res_dict = result.to_dict()
+    res_dict["top_predictions"] = top_preds
+    return res_dict
+
+
+def classify_local(
+    image_path: Optional[str] = None,
+    description: str = "",
+    fallback_reason: Optional[str] = None,
+    request_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Keyword and sensory heuristic classifier.
+    Preserves backwards-compatibility with existing tests and scripts.
+    """
+    result = classify_heuristic_vision(
+        image_path=image_path,
+        description=description,
+        request_id=request_id
+    )
+    if fallback_reason:
+        result["fallbackReason"] = fallback_reason
+        result["fallbackUsed"] = True
+        result["isFallback"] = True
+    return result
 
 
 def classify_complaint(
     image_path: Optional[str] = None,
     description: str = "",
-    use_llm: bool = True,
+    use_llm: bool = False,
     request_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Main classification orchestrator:
-    1. If an image is provided and MobileNetV3 weights are loaded:
-       Runs MobileNetV3 Small transfer learning inference directly.
-       (predictionSource: "mobilenet")
-    2. If no image or MobileNetV3 not ready / errors:
-       Tries Gemini if configured.
-       (predictionSource: "gemini_vision")
-    3. Graceful degradation:
-       Falls back to heuristic rules with explicit fallbackUsed=True.
-       (predictionSource: "rules")
+    Heuristic vision is the PRIMARY and EXCLUSIVE classification engine
+    for image-based civic complaint analysis.
+
+    Requirements enforced:
+    - Analyzed exclusively using the heuristic vision engine.
+    - MobileNetV3 is NEVER invoked for classification in this flow.
+    - Heuristic classification failures do NOT silently call MobileNetV3;
+      instead, an explicit handled Other result with clear reason is returned.
+    - Response schema preserves category, subcategory, priority, department,
+      confidence, reason, source, predictionSource, and features.
+    - Deployed configuration cannot override heuristic classification.
     """
-    has_image = bool(image_path and os.path.exists(image_path))
+    t0 = time.perf_counter()
 
-    # Priority 1: MobileNetV3 Small Vision Model (if image is present and model is loaded)
-    if has_image and MOBILENET_LOADER.is_loaded:
-        try:
-            pred_cat, conf, top_preds, latency_ms = MOBILENET_LOADER.predict(image_path, top_k=3)
-
-            # Validate against taxonomy
-            if not validate_category(pred_cat):
-                pred_cat = "Other"
-
-            cat_data = CIVIC_TAXONOMY.get(pred_cat, CIVIC_TAXONOMY["Other"])
-
-            # Map subcategory based on description tokens if available
-            text = clean_text(description)
-            selected_sub = cat_data["subcategories"][0]
-            for sub in cat_data["subcategories"]:
-                sub_tokens = [w.lower() for w in re.findall(r"\w+", sub)]
-                if any(w in text for w in sub_tokens if len(w) > 3):
-                    selected_sub = sub
-                    break
-
-            # Assess life safety hazard from text
-            is_hazard, hazard_priority, matched_hazards = detect_hazard_keywords(text)
-            priority = hazard_priority if is_hazard else cat_data["default_priority"]
-
-            reason = f"Classified by MobileNetV3-Small neural network with {conf * 100:.1f}% confidence."
-            if is_hazard:
-                reason += f" Escalated to {priority} due to critical hazard indicators: [{', '.join(matched_hazards)}]."
-
-            model_version = MOBILENET_LOADER.config.get("version", "1.0.0")
-
-            return {
-                "category": pred_cat,
-                "subcategory": selected_sub,
-                "predictedCategory": pred_cat,
-                "predictedSubcategory": selected_sub,
-                "priority": priority,
-                "confidence": conf,
-                "reason": reason,
-                "department": get_department_for_category(pred_cat),
-                "model": "MobileNetV3-Small-Civic",
-                "modelVersion": model_version,
-                "isFallback": False,
-                "fallbackUsed": False,
-                "fallbackReason": None,
-                "modelLoaded": True,
-                "source": "mobilenet_v3",
-                "predictionSource": "mobilenet",
-                "top_predictions": top_preds,
-                "inference_time_ms": latency_ms,
-                "requestId": request_id,
-            }
-        except Exception as e:
-            print(f"[SmartCity Classifier] MobileNetV3 inference warning: {e}")
-            # Continue to secondary options on error
-
-    # Priority 2: Gemini Multimodal Vision (if LLM enabled and key available)
-    if use_llm:
-        llm_result = classify_with_gemini(
+    try:
+        result = classify_heuristic_vision(
             image_path=image_path,
             description=description,
             request_id=request_id
         )
-        if llm_result:
-            return llm_result
+    except Exception as exc:
+        print(f"[SmartCity Classifier Error] [{request_id}] Heuristic classification exception: {exc}")
+        text = clean_text(description)
+        is_hazard, hazard_priority, matched_hazards = detect_hazard_keywords(text)
+        priority = hazard_priority if is_hazard else PRIORITY_MEDIUM
+        reason = f"Heuristic vision analysis failed: {str(exc)}. Categorized as Other."
+        if is_hazard:
+            reason += f" Escalated to {priority} due to hazard indicators: [{', '.join(matched_hazards)}]."
 
-    # Priority 3: Transparent Heuristic Fallback
-    fallback_reason = "Fallback rule classification"
-    if has_image and not MOBILENET_LOADER.is_loaded:
-        fallback_reason = f"Fallback active (MobileNetV3 model offline: {MOBILENET_LOADER.load_error})"
-    elif not has_image:
-        fallback_reason = "Text-only heuristic classification (no image provided)"
+        result = {
+            "category": "Other",
+            "subcategory": "General Issue",
+            "predictedCategory": "Other",
+            "predictedSubcategory": "General Issue",
+            "priority": priority,
+            "confidence": 0.50,
+            "reason": reason,
+            "department": get_department_for_category("Other"),
+            "model": "SmartCity-HeuristicVision-v1.0",
+            "modelVersion": None,
+            "isFallback": True,
+            "fallbackUsed": True,
+            "fallbackReason": f"Heuristic exception: {str(exc)}",
+            "modelLoaded": MOBILENET_LOADER.is_loaded,
+            "source": "heuristic",
+            "predictionSource": "heuristic",
+            "top_predictions": [{"category": "Other", "confidence": 0.50}],
+            "requestId": request_id,
+            "error": str(exc),
+        }
 
-    return classify_local(
-        image_path=image_path,
-        description=description,
-        fallback_reason=fallback_reason,
-        request_id=request_id
-    )
+    result["inference_time_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+    return result

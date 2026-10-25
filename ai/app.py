@@ -138,7 +138,7 @@ def health():
     is_model_verified = bool(model_status.get("verified", False))
 
     logger.info(
-        "HEALTH CHECK | Model loaded: %s | Verified: %s | Model: %s | Device: %s",
+        "HEALTH CHECK | PrimaryEngine: heuristic_vision | Model loaded: %s | Verified: %s | Model: %s | Device: %s",
         is_model_loaded,
         is_model_verified,
         model_status.get("model_name"),
@@ -150,6 +150,7 @@ def health():
         "service": "Smart City Civic AI Microservice",
         "version": "1.0.0",
         "port": int(os.environ.get("AI_PORT", 8000)),
+        "primaryClassificationEngine": "heuristic_vision",
         "modelLoaded": is_model_loaded,
         "modelVerified": is_model_verified,
         "modelName": model_status.get("model_name"),
@@ -165,6 +166,7 @@ def health():
         "geminiConfigured": bool(gemini_key),
         "fallbackClassificationEnabled": True,
         "capabilities": [
+            "heuristic-vision-inspection",
             "mobilenet_v3_small_transfer_learning",
             "multimodal-vision-inspection",
             "civic-taxonomy-classification",
@@ -418,7 +420,7 @@ def analyze():
         result = classify_complaint(
             image_path=temp_path,
             description=description,
-            use_llm=True,
+            use_llm=False,
             request_id=request_id,
         )
 
@@ -432,28 +434,32 @@ def analyze():
             )
 
         result["requestId"] = request_id
+        if "inference_time_ms" not in result:
+            result["inference_time_ms"] = round(inference_ms, 2)
 
-        # Diagnostic logging (Safe, no credentials logged)
+        heuristic_success = not bool(result.get("error"))
+
+        # Explicit diagnostic log showing Source: heuristic, whether heuristic analysis succeeded, and any errors
         logger.info(
-            "CLASSIFICATION DIAGNOSTIC | ReqID: %s | Source: %s | ModelLoaded: %s | "
-            "VisionApiCalled: %s | FallbackUsed: %s | FinalCat: %s | Subcat: %s | "
-            "Conf: %s | Latency: %.2f ms",
+            "CLASSIFICATION DIAGNOSTIC | ReqID: %s | Source: heuristic | "
+            "HeuristicSuccess: %s | Category: %s | Subcategory: %s | "
+            "Priority: %s | Department: %s | Conf: %s | Latency: %.2f ms | Error: %s",
             request_id,
-            result.get("predictionSource", "unknown"),
-            result.get("modelLoaded", False),
-            result.get("predictionSource") == "gemini_vision",
-            result.get("fallbackUsed", False),
+            heuristic_success,
             result.get("predictedCategory", result.get("category", "Unknown")),
             result.get("predictedSubcategory", result.get("subcategory", "")),
+            result.get("priority", "MEDIUM"),
+            result.get("department", "Unknown"),
             result.get("confidence", 0.0),
             inference_ms,
+            result.get("error") or "None",
         )
 
         return jsonify(result), 200
 
     except Exception as exc:
         sanitized_error = str(exc)[:200]
-        logger.exception("ANALYSIS ERROR [%s] | Failure: %s", request_id, sanitized_error)
+        logger.exception("ANALYSIS ERROR [%s] | Source: heuristic | HeuristicSuccess: False | Error: %s", request_id, sanitized_error)
 
         return jsonify({
             "error": "Complaint analysis failed",
@@ -464,14 +470,16 @@ def analyze():
             "priority": "MEDIUM",
             "confidence": 0.5,
             "department": "General Municipal Grievance Cell",
-            "reason": "Automated fallback due to processing error",
+            "reason": f"Heuristic vision analysis failed: {sanitized_error}. Categorized as Other.",
             "isFallback": True,
             "fallbackUsed": True,
             "fallbackReason": f"Processing exception: {sanitized_error}",
-            "predictionSource": "rules",
+            "source": "heuristic",
+            "predictionSource": "heuristic",
+            "model": "SmartCity-HeuristicVision-v1.0",
             "modelLoaded": get_model_status().get("loaded", False),
             "requestId": request_id,
-        }), 500
+        }), 200
 
     finally:
         if temp_path:

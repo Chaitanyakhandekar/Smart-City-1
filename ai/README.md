@@ -113,9 +113,10 @@ curl -X POST http://localhost:8000/analyze \
   "priority": "HIGH",
   "confidence": 0.94,
   "department": "Municipal Water Supply & Sewerage Board (Drainage Wing)",
-  "reason": "Identified as Drainage (Drainage Overflow) from civic report patterns.",
-  "model": "SmartCity-CivicVision-v1.0",
-  "source": "local-heuristic-vision",
+  "reason": "Classified by heuristic vision engine: Drainage (Drainage Overflow). Visual indicators: [wet/fluid reflection].",
+  "model": "SmartCity-HeuristicVision-v1.0",
+  "source": "heuristic",
+  "predictionSource": "heuristic",
   "isFallback": false
 }
 ```

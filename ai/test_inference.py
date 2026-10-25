@@ -71,7 +71,8 @@ def test_image_analysis(image_path: str, description: str = ""):
         assert "department" in result, "Missing 'department' in result"
         assert "priority" in result, "Missing 'priority' in result"
 
-        print(f" Model Reported: {result.get('model')} | Fallback: {result.get('isFallback')}")
+        print(f" Model Reported: {result.get('model')} | Source: {result.get('source')} | Fallback: {result.get('isFallback')}")
+        assert result.get("source") == "heuristic" or result.get("predictionSource") == "heuristic", "Result source must be heuristic"
         print(" PASS: /analyze endpoint successfully classified image.")
         return result
     except Exception as e:
@@ -96,6 +97,8 @@ def test_corrupt_image_resilience():
         result = res.json()
         print(f"Fallback response: {json.dumps(result, indent=2)}")
         assert res.status_code == 200 or res.status_code == 500
+        assert result.get("category") == "Other" or result.get("predictedCategory") == "Other", "Corrupt image must return Other"
+        assert result.get("predictionSource") == "heuristic", "Prediction source must remain heuristic"
         print(" PASS: Service handled corrupt image safely without crashing.")
     finally:
         if os.path.exists(corrupt_path):

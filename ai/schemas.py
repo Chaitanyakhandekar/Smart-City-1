@@ -173,6 +173,7 @@ class ImageFeatures:
     brightness: float = 0.0
     contrast: float = 0.0
     aspect_ratio: float = 1.0
+    error: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -186,10 +187,10 @@ class ClassificationResult:
     confidence: float
     reason: str
     department: str
-    model: str = "SmartCity-CivicVision-v1.0"
+    model: str = "SmartCity-HeuristicVision-v1.0"
     isFallback: bool = False
-    source: str = "local-heuristic-vision"
-    predictionSource: str = "rules"
+    source: str = "heuristic"
+    predictionSource: str = "heuristic"
     predictedCategory: str = ""
     predictedSubcategory: str = ""
     modelLoaded: bool = False
@@ -198,6 +199,7 @@ class ClassificationResult:
     fallbackReason: Optional[str] = None
     requestId: Optional[str] = None
     features: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
 
     def __post_init__(self):
         if not self.predictedCategory:
